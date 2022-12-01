@@ -197,6 +197,25 @@ class TVM_DLL DeviceAPI {
    */
   virtual void* AllocWorkspace(Device dev, size_t nbytes, DLDataType type_hint = {});
   /*!
+   * \brief Allocate temporal workspace for backend execution.
+   *
+   *  \note We have the following assumption about backend temporal
+   *   workspace allocation, and backend will optimize for such assumption:
+   *
+   *  - Only a few allocation will happen, and space will be released after use.
+   *  - The release order is usually in reverse order of allocate (stack style).
+   *  - Repeative pattern of same allocations over different runs.
+   *  - Workspace should not overlap between different threads(i.e. be threadlocal)
+   *
+   * \param dev The device of allocation.
+   * \param nbytes The size to be allocated.
+   * \param type_hint The type of elements. Only needed by certain backends such
+   * as OpenGL, as nbytes is sufficient for most backends.
+   * \param mem_scope memory scope
+   */
+  virtual void* AllocWorkspace(Device dev, size_t nbytes, String mem_scope,
+                               DLDataType type_hint = {});
+  /*!
    * \brief Free temporal workspace in backend execution.
    *
    * \param dev The device of allocation.

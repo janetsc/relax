@@ -147,14 +147,28 @@ void* HexagonDeviceAPI::AllocWorkspace(Device dev, size_t size, DLDataType type_
   return dmlc::ThreadLocalStore<HexagonWorkspacePool>::Get()->AllocWorkspace(dev, size);
 }
 
+void* HexagonDeviceAPI::AllocWorkspace(Device dev, size_t size, String mem_scope,
+                                       DLDataType type_hint) {
+  if (mem_scope == "global.vtcm") {
+    int64_t shape = static_cast<int64_t>(size);
+    return AllocDataSpace(dev, 1, &shape, type_hint, mem_scope);
+  } else {
+    return AllocWorkspace(dev, size, type_hint);
+  }
+}
+
 void HexagonDeviceAPI::FreeWorkspace(Device dev, void* data) {
   CHECK(IsValidDevice(dev)) << "dev.device_type: " << dev.device_type;
   CHECK(runtime_hexbuffs) << "Attempted to free Hexagon workspace with "
                           << "HexagonDeviceAPI::FreeWorkspace outside of a session.  "
                           << "Please call HexagonDeviceAPI::AcquireResources";
-  CHECK(runtime_hexbuffs->FindHexagonBuffer(data) != nullptr)
-      << "Attempt made to free unknown or already freed workspace allocation";
-  dmlc::ThreadLocalStore<HexagonWorkspacePool>::Get()->FreeWorkspace(dev, data);
+  auto hexbuff = runtime_hexbuffs->FindHexagonBuffer(data);
+  CHECK(hexbuff != nullptr) << "Attempt made to free unknown or already freed workspace allocation";
+  if (hexbuff->GetStorageScope() == HexagonBuffer::StorageScope::kVTCM) {
+    FreeDataSpace(dev, data);
+  } else {
+    dmlc::ThreadLocalStore<HexagonWorkspacePool>::Get()->FreeWorkspace(dev, data);
+  }
 }
 
 void* HexagonDeviceAPI::AllocVtcmWorkspace(Device dev, int ndim, const int64_t* shape,

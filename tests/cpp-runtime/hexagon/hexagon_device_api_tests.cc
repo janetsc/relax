@@ -190,3 +190,22 @@ TEST_F(HexagonDeviceAPITest, vtcm_pool) {
   EXPECT_THROW(hexapi->VtcmPool(), InternalError);
   hexapi->AcquireResources();
 }
+
+// Test AllocWorkspace with scope
+TEST_F(HexagonDeviceAPITest, alloc_workspace_with_scope) {
+  size_t vtcm_size = hexapi->VtcmPool()->TotalBytes();
+  void* all_vtcm = hexapi->VtcmPool()->Allocate(vtcm_size);
+  hexapi->VtcmPool()->Free(all_vtcm, vtcm_size);
+
+  auto global_workspace = hexapi->AllocWorkspace(hex_dev, nbytes, "global", int8);
+  all_vtcm = hexapi->VtcmPool()->Allocate(vtcm_size);
+  hexapi->VtcmPool()->Free(all_vtcm, vtcm_size);
+  hexapi->FreeWorkspace(hex_dev, global_workspace);
+
+  auto vtcm_workspace = hexapi->AllocWorkspace(hex_dev, nbytes, "global.vtcm", int8);
+  EXPECT_THROW(hexapi->VtcmPool()->Allocate(vtcm_size), InternalError);
+  hexapi->FreeWorkspace(hex_dev, vtcm_workspace);
+
+  all_vtcm = hexapi->VtcmPool()->Allocate(vtcm_size);
+  hexapi->VtcmPool()->Free(all_vtcm, vtcm_size);
+}

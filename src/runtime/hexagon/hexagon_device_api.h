@@ -114,6 +114,11 @@ class HexagonDeviceAPI final : public DeviceAPI {
    */
   void* AllocWorkspace(Device dev, size_t size, DLDataType type_hint) final;
 
+  /*! \brief Request a dynamically allocated HexagonBuffer from a workspace pool with scope.
+   *  \returns The underlying allocation pointer.
+   */
+  void* AllocWorkspace(Device dev, size_t size, String mem_scope, DLDataType type_hint) final;
+
   //! Erase from HexagonBufferManager and free
   void FreeWorkspace(Device dev, void* data) final;
 

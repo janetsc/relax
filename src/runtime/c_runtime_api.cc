@@ -144,6 +144,16 @@ void* DeviceAPI::AllocWorkspace(Device dev, size_t size, DLDataType type_hint) {
   return AllocDataSpace(dev, size, kTempAllocaAlignment, type_hint);
 }
 
+void* DeviceAPI::AllocWorkspace(Device dev, size_t size, String mem_scope, DLDataType type_hint) {
+  if (mem_scope == "global") {
+    // by default, we can always redirect to the non-scoped workspace allocation
+    return AllocDataSpace(dev, size, kTempAllocaAlignment, type_hint);
+  }
+  LOG(FATAL) << "Device does not support allocate workspace with "
+             << "specified memory scope: " << mem_scope;
+  return nullptr;
+}
+
 static size_t GetDataAlignment(const DLDataType dtype) {
   size_t align = (dtype.bits / 8) * dtype.lanes;
   if (align < kAllocAlignment) return kAllocAlignment;
@@ -439,6 +449,22 @@ void* TVMBackendAllocWorkspace(int device_type, int device_id, uint64_t size, in
   type_hint.lanes = 1;
 
   return DeviceAPIManager::Get(dev)->AllocWorkspace(dev, static_cast<size_t>(size), type_hint);
+}
+
+TVM_DLL void* TVMBackendAllocWorkspaceWithScope(int device_type, int device_id, uint64_t size,
+                                                char* mem_scope, int dtype_code_hint,
+                                                int dtype_bits_hint) {
+  DLDevice dev;
+  dev.device_type = static_cast<DLDeviceType>(device_type);
+  dev.device_id = device_id;
+
+  DLDataType type_hint;
+  type_hint.code = static_cast<decltype(type_hint.code)>(dtype_code_hint);
+  type_hint.bits = static_cast<decltype(type_hint.bits)>(dtype_bits_hint);
+  type_hint.lanes = 1;
+
+  return DeviceAPIManager::Get(dev)->AllocWorkspace(dev, static_cast<size_t>(size), mem_scope,
+                                                    type_hint);
 }
 
 int TVMBackendFreeWorkspace(int device_type, int device_id, void* ptr) {
